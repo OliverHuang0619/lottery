@@ -5,6 +5,7 @@ import './App.css'
 import './dashboard.css'
 import './forecast.css'
 import './roi.css'
+import { authHeaders } from './api'
 
 type Ball = { position: string; number: number; zodiac: string }
 type RecordRow = { issue: string; date: string; numbers: Ball[] }
@@ -35,7 +36,7 @@ function App() {
   const [roiView, setRoiView] = useState<RoiView>('all')
   const load = useCallback(async () => {
     setLoading(true)
-    try { const response = await fetch(`${import.meta.env.BASE_URL}dashboard.json`, { cache: 'no-store' }); if (!response.ok) throw new Error(`数据接口返回 ${response.status}`); setData(await response.json()); setError('') }
+    try { const response = await fetch(import.meta.env.VITE_STATIC_DASHBOARD === 'true' ? `${import.meta.env.BASE_URL}dashboard.json` : '/api/dashboard', { cache: 'no-store', headers: import.meta.env.VITE_STATIC_DASHBOARD === 'true' ? {} : authHeaders() }); if (!response.ok) throw new Error(`数据接口返回 ${response.status}`); setData(await response.json()); setError('') }
     catch (reason) { setError(reason instanceof Error ? reason.message : '无法加载数据') }
     finally { setLoading(false) }
   }, [])

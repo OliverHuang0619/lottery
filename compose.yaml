@@ -1,0 +1,36 @@
+services:
+  lottery:
+    build:
+      context: .
+      args:
+        CODEX_VERSION: ${CODEX_VERSION:-0.155.1}
+    image: lottery-codex:local
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-4173}:4173"
+    environment:
+      APP_TOKEN: ${APP_TOKEN:?Set APP_TOKEN in .env (at least 24 characters)}
+      CODEX_API_KEY: ${CODEX_API_KEY:-}
+      CODEX_MODEL: ${CODEX_MODEL:-}
+      CODEX_REASONING_EFFORT: ${CODEX_REASONING_EFFORT:-low}
+      SOURCE_ALLOWED_HOSTS: ${SOURCE_ALLOWED_HOSTS:-2026kj.zkclhb.com}
+      TASK_TIMEOUT_MS: ${TASK_TIMEOUT_MS:-1200000}
+    volumes:
+      - lottery-workspace:/workspace
+      - lottery-state:/state
+      - lottery-codex:/home/node/.codex
+    security_opt:
+      - no-new-privileges:true
+      # Codex uses bubblewrap; Docker's default seccomp profile blocks the
+      # unprivileged user namespace it needs for the inner sandbox.
+      - seccomp:unconfined
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 2g
+    stop_grace_period: 15s
+volumes:
+  lottery-workspace:
+  lottery-state:
+  lottery-codex:
