@@ -1,0 +1,39 @@
+{
+  "cutoff_issue": "100",
+  "target_issue": "101",
+  "actual_issue": "101",
+  "method_version": "trend-weighted-random-calibrated-no-repeat-flat-zodiac-v7",
+  "seed": 20260916,
+  "prediction_created_at": "2026-09-16T06:37:50.439902+00:00",
+  "predicted_special_number": 42,
+  "actual_special_number": 8,
+  "special_number_hit": false,
+  "predicted_special_zodiac": "牛",
+  "actual_special_zodiac": "猪",
+  "special_zodiac_hit": false,
+  "special_zodiac_top3_hit": false,
+  "special_number_top4_hit": false,
+  "special_pick_regular_hit": false,
+  "predicted_flat_zodiac": "牛",
+  "actual_all_zodiacs": [
+    "兔",
+    "猪",
+    "猴",
+    "羊",
+    "虎",
+    "鼠"
+  ],
+  "flat_zodiac_hit": false,
+  "regular_hits": [],
+  "regular_hit_count": 0,
+  "predicted_regular_three": [
+    9,
+    29,
+    5
+  ],
+  "regular_three_hits": [],
+  "regular_three_hit_count": 0,
+  "regular_three_exact_hit": false,
+  "any_overlap": [],
+  "special_abs_error": 34
+}

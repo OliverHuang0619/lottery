@@ -4,6 +4,32 @@
   "order": "descending",
   "records": [
     {
+      "issue": "102",
+      "date": "2026-09-19",
+      "numbers": [
+        {"position": "平一", "number": 5, "zodiac": "虎"},
+        {"position": "平二", "number": 19, "zodiac": "鼠"},
+        {"position": "平三", "number": 11, "zodiac": "猴"},
+        {"position": "平四", "number": 8, "zodiac": "猪"},
+        {"position": "平五", "number": 31, "zodiac": "鼠"},
+        {"position": "平六", "number": 14, "zodiac": "蛇"},
+        {"position": "特码", "number": 21, "zodiac": "狗"}
+      ]
+    },
+    {
+      "issue": "101",
+      "date": "2026-09-17",
+      "numbers": [
+        {"position": "平一", "number": 41, "zodiac": "虎"},
+        {"position": "平二", "number": 47, "zodiac": "猴"},
+        {"position": "平三", "number": 17, "zodiac": "虎"},
+        {"position": "平四", "number": 4, "zodiac": "兔"},
+        {"position": "平五", "number": 31, "zodiac": "鼠"},
+        {"position": "平六", "number": 48, "zodiac": "羊"},
+        {"position": "特码", "number": 8, "zodiac": "猪"}
+      ]
+    },
+    {
       "issue": "100",
       "date": "2026-09-15",
       "numbers": [
