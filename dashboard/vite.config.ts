@@ -39,5 +39,6 @@ function dynamicData() {
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
+  server: { proxy: { '/api': 'http://127.0.0.1:4173' } },
   plugins: [react(), dynamicData()],
 })

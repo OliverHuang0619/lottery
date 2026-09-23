@@ -1,0 +1,14 @@
+.git
+.specstory
+.env
+.env.*
+backups
+work
+runtime
+sources
+secrets
+**/node_modules
+**/dist
+**/__pycache__
+**/*.tmp
+dashboard/public/dashboard.json

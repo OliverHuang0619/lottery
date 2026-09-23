@@ -41,6 +41,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build dashboard and static data
         working-directory: dashboard
+        env:
+          VITE_STATIC_DASHBOARD: 'true'
         run: pnpm build
       - name: Configure Pages
         uses: actions/configure-pages@v5

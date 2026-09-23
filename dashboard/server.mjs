@@ -2,11 +2,17 @@ import { createServer } from 'node:http'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { openStore } from './backend/store.mjs'
+import { createExecutor } from './backend/executor.mjs'
+import { createApi } from './backend/api.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const projectRoot = path.resolve(here, '..')
+const projectRoot = path.resolve(process.env.WORKSPACE_DIR || path.join(here, '..'))
 const dist = path.join(here, 'dist')
 const port = Number(process.env.PORT || 4173)
+const store = openStore(process.env.STATE_DIR || path.join(projectRoot, 'runtime'))
+const executor = createExecutor(store, projectRoot)
+const api = createApi(store, executor, process.env.APP_TOKEN)
 const json = async file => JSON.parse(await readFile(path.join(projectRoot, file), 'utf8'))
 
 async function dashboardData() {
@@ -32,15 +38,18 @@ async function dashboardData() {
 }
 
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.json':'application/json; charset=utf-8' }
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
   try {
-    if (req.url === '/dashboard.json' || req.url === '/api/dashboard') {
+    const url = new URL(req.url, 'http://localhost')
+    if (await api(req, res, url)) return
+    if (url.pathname === '/dashboard.json' || url.pathname === '/api/dashboard') {
       res.writeHead(200, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store' })
       return res.end(JSON.stringify(await dashboardData()))
     }
     const requested = req.url === '/' ? 'index.html' : decodeURIComponent(req.url.split('?')[0].slice(1))
     let file = path.resolve(dist, requested)
-    if (!file.startsWith(dist)) throw new Error('invalid path')
+    if (file !== dist && !file.startsWith(dist + path.sep)) throw new Error('invalid path')
+    if (path.extname(file) === '.json') { res.writeHead(404); return res.end() }
     try { if (!(await stat(file)).isFile()) file = path.join(dist, 'index.html') } catch { file = path.join(dist, 'index.html') }
     res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' })
     res.end(await readFile(file))
@@ -48,4 +57,9 @@ createServer(async (req, res) => {
     res.writeHead(500, { 'Content-Type':'application/json; charset=utf-8' })
     res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'unknown error' }))
   }
-}).listen(port, '127.0.0.1', () => console.log(`Dashboard: http://127.0.0.1:${port}`))
+}).listen(port, process.env.HOST || '127.0.0.1', () => console.log(`Dashboard: http://localhost:${port}`))
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
+  executor.stop()
+  server.close(() => process.exit(0))
+  setTimeout(() => process.exit(0), 3000).unref()
+})
