@@ -1,4 +1,6 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { DEFAULT_SOURCE, validateSource } from './source.mjs'
 
 export const MODEL_OPTIONS = Object.freeze([
@@ -13,6 +15,13 @@ export const EFFORT_OPTIONS = Object.freeze([
 ])
 const defaultModel = () => process.env.CODEX_MODEL || 'gpt-5.6-sol'
 const defaultEffort = () => process.env.CODEX_REASONING_EFFORT || 'low'
+export function appVersion() {
+  if (process.env.APP_VERSION) return process.env.APP_VERSION
+  for (const file of [path.resolve('VERSION'), path.resolve('..', 'VERSION'), '/app/VERSION']) {
+    try { return readFileSync(file, 'utf8').trim() } catch { /* try the next runtime location */ }
+  }
+  return 'unknown'
+}
 export function automaticTitle(content, sourceUrl = null) {
   if (sourceUrl && content.startsWith('获取最新一期')) return '最新开奖分析与预测'
   const compact = content.replace(/\s+/g, ' ').trim().replace(/[。！？!?]+$/u, '')
@@ -32,7 +41,7 @@ async function body(req) {
 export function createApi(store, executor, token) {
   if (!token || token.length < 24) throw new Error('请设置至少 24 字符的 APP_TOKEN')
   return async (req, res, url) => {
-    if (url.pathname === '/api/health') { send(res, 200, { ok: true }); return true }
+    if (url.pathname === '/api/health') { send(res, 200, { ok: true, version: appVersion() }); return true }
     if (!url.pathname.startsWith('/api/') && url.pathname !== '/dashboard.json') return false
     const incoming = Buffer.from((req.headers.authorization || '').replace(/^Bearer /, ''))
     const expected = Buffer.from(token)
@@ -40,7 +49,7 @@ export function createApi(store, executor, token) {
     try {
       if (url.pathname === '/api/dashboard' || url.pathname === '/dashboard.json') return false
       if (req.method === 'GET' && url.pathname === '/api/config') {
-        send(res, 200, { defaultSource: DEFAULT_SOURCE, defaultModel: defaultModel(), defaultEffort: defaultEffort(), models: MODEL_OPTIONS, efforts: EFFORT_OPTIONS, skills: [{ id: 'analyze-lottery-history', name: '开奖分析与预测' }] }); return true
+        send(res, 200, { version: appVersion(), defaultSource: DEFAULT_SOURCE, defaultModel: defaultModel(), defaultEffort: defaultEffort(), models: MODEL_OPTIONS, efforts: EFFORT_OPTIONS, skills: [{ id: 'analyze-lottery-history', name: '开奖分析与预测' }] }); return true
       }
       if (url.pathname === '/api/conversations') {
         if (req.method === 'GET') {

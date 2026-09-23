@@ -1,9 +1,11 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { readFile, readdir } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 const root = path.resolve(import.meta.dirname, '..')
+const appVersion = readFileSync(path.join(root, 'VERSION'), 'utf8').trim()
 async function readJson(file: string) { return JSON.parse(await readFile(path.join(root, file), 'utf8')) }
 async function dashboardPayload() {
   const [recordsDoc, analysis, evaluation, reviewFiles, predictionFiles] = await Promise.all([
@@ -39,6 +41,7 @@ function dynamicData() {
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
+  define: { __APP_VERSION__: JSON.stringify(appVersion) },
   server: { proxy: { '/api': 'http://127.0.0.1:4173' } },
   plugins: [react(), dynamicData()],
 })

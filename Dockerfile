@@ -1,6 +1,7 @@
 FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS frontend
 WORKDIR /build/dashboard
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
+COPY VERSION /build/VERSION
 COPY dashboard/package.json dashboard/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY dashboard/ ./
@@ -13,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-cert
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g @openai/codex@${CODEX_VERSION}
 WORKDIR /app
+COPY VERSION ./VERSION
 COPY --from=frontend /build/dashboard/dist ./dashboard/dist
 COPY dashboard/server.mjs ./dashboard/server.mjs
 COPY dashboard/backend ./dashboard/backend

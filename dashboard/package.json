@@ -1,12 +1,13 @@
 {
   "name": "dashboard",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "generate:data": "node scripts/generate-dashboard.mjs",
-    "build": "pnpm generate:data && tsc -b && vite build",
+    "check:version": "node scripts/check-version.mjs",
+    "build": "pnpm check:version && pnpm generate:data && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "start": "node server.mjs"

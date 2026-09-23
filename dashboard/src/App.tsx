@@ -85,7 +85,7 @@ function App() {
   const pageCount = Math.max(1, Math.ceil(filtered.length / 8))
 
   return <main>
-    <header className="topbar"><div className="brand-mark"><Activity size={19}/></div><div className="brand-copy"><strong>财富自由</strong><span>开奖记录 · 趋势 · 预测复盘</span></div><nav><a href="#overview">总览</a><a href="#trends">走势</a><a href="#roi">投资回报</a><a href="#flat-zodiac">平特一肖</a><a href="#flat-special">平特码</a><a href="#history">开奖记录</a></nav><div className="sync-state"><span className="live-dot"/><span>动态数据</span><button onClick={load} disabled={loading} aria-label="刷新数据"><RefreshCw size={16} className={loading?'spin':''}/>刷新</button></div></header>
+    <header className="topbar"><div className="brand-mark"><Activity size={19}/></div><div className="brand-copy"><strong>财富自由 <small>v{__APP_VERSION__}</small></strong><span>开奖记录 · 趋势 · 预测复盘</span></div><nav><a href="#overview">总览</a><a href="#trends">走势</a><a href="#roi">投资回报</a><a href="#flat-zodiac">平特一肖</a><a href="#flat-special">平特码</a><a href="#history">开奖记录</a></nav><div className="sync-state"><span className="live-dot"/><span>动态数据</span><button onClick={load} disabled={loading} aria-label="刷新数据"><RefreshCw size={16} className={loading?'spin':''}/>刷新</button></div></header>
     {error && <div className="error-banner">{error}，请确认本地数据服务正在运行。</div>}
     <section className="intro" id="overview"><div><p className="eyebrow"><span/> LIVE ANALYTICS</p><h1>把每一期，放回数据里看。</h1><p className="lede">自动读取最新开奖记录、锁定预测与真实复盘。数据每60秒刷新，所有预测与回测口径分开呈现。</p></div><div className="updated"><Clock3 size={15}/>{data?new Date(data.generatedAt).toLocaleString('zh-CN'):'正在连接数据…'}</div></section>
     <section className="headline-grid">

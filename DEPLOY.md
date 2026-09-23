@@ -21,6 +21,7 @@
 - `lottery-codex`：Codex 登录与 session 数据，支持后续消息 `exec resume`。
 - 停止：`docker compose down`；不要加 `-v`，否则删除数据卷。升级：`docker compose up -d --build`。
 - 日志：`docker compose logs -f lottery`；健康检查：`/api/health`。任务失败原因在聊天 UI 中显示。
+- 软件版本读取仓库根目录的 `VERSION`，并显示在前端品牌区；`/api/health` 同时返回运行版本，便于核对部署镜像。
 - 发布镜像：`docker save lottery-codex:local -o lottery-codex.tar`，目标机 `docker load -i lottery-codex.tar`；使用同一 compose 文件执行 `docker compose up -d --no-build`。
 - 备份请先停止容器，再备份以上三个卷，确保数据库与历史文件一致。
 

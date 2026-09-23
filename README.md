@@ -72,3 +72,7 @@ chmod +x scripts/install-skill.sh   # 首次需要
 首次使用时，在 GitHub 仓库的 **Settings → Pages → Build and deployment** 中将 Source 设置为 **GitHub Actions**。之后每次数据提交都会自动更新站点。
 
 本地 `pnpm start` 仍会动态提供 `/dashboard.json`；GitHub Pages 则读取构建时生成的静态快照。
+
+## 版本管理
+
+软件版本由仓库根目录的 `VERSION` 统一管理，并遵循语义化版本 `主版本.次版本.修订版本`。发布时同时更新 `VERSION` 与 `dashboard/package.json`；`pnpm build` 会检查两处版本一致，避免发布错误版本。前端品牌区、登录页、`/api/config` 和 `/api/health` 都会显示或返回当前版本。
