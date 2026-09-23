@@ -25,6 +25,12 @@
 - 发布镜像：`docker save lottery-codex:local -o lottery-codex.tar`，目标机 `docker load -i lottery-codex.tar`；使用同一 compose 文件执行 `docker compose up -d --no-build`。
 - 备份请先停止容器，再备份以上三个卷，确保数据库与历史文件一致。
 
+### Codex 沙箱启动失败
+
+若回答中出现 `bwrap: Failed to make / slave: Permission denied`，表示宿主机的 Docker seccomp 或 AppArmor 阻止了 Codex 创建内部 Linux 沙箱。部署包的 Compose 已为该服务设置 `seccomp:unconfined` 和 `apparmor:unconfined`；更新 `compose.yaml` 后执行 `docker compose up -d --force-recreate --no-build`。
+
+若仍失败，在宿主机执行 `sysctl kernel.unprivileged_userns_clone user.max_user_namespaces kernel.apparmor_restrict_unprivileged_userns`。需要保证 `kernel.unprivileged_userns_clone=1`、`user.max_user_namespaces` 大于 0；Ubuntu 启用了额外的 AppArmor user namespace 限制时，还需由服务器管理员按安全策略允许该能力。此项是宿主机内核设置，无法在容器镜像内修复。
+
 ## 一键抓取的边界
 
 默认地址为 `https://2026kj.zkclhb.com:2026/hk.html`。后端验证 HTTPS 域名白名单和公网 IPv4，固定解析后的 IP，不跟随重定向，30 秒超时，响应最大 2 MB。自定义地址需先在 `SOURCE_ALLOWED_HOSTS` 加入域名（逗号分隔）并重建容器配置。

@@ -87,7 +87,7 @@ test('source validation rejects private networks, credentials, unlisted hosts an
 test('model configuration is exposed and invalid overrides are rejected', async t => {
   const f = await fixture(t)
   const config = await (await f.request('/api/config')).json()
-  assert.equal(config.version, '1.0.0')
+  assert.equal(config.version, '1.0.1')
   assert.equal(config.defaultModel, 'gpt-5.6-sol')
   assert.equal(config.defaultEffort, 'low')
   assert.ok(config.models.some(row => row.id === 'gpt-5.6-sol'))

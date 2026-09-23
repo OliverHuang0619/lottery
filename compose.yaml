@@ -25,6 +25,9 @@ services:
       # Codex uses bubblewrap; Docker's default seccomp profile blocks the
       # unprivileged user namespace it needs for the inner sandbox.
       - seccomp:unconfined
+      # Ubuntu/Debian hosts may also deny bubblewrap's mount namespace through
+      # Docker's outer AppArmor profile. Codex still applies its inner sandbox.
+      - apparmor:unconfined
     cap_drop:
       - ALL
     pids_limit: 256
