@@ -1,4 +1,4 @@
-export function authHeaders() { return { Authorization: `Bearer ${sessionStorage.getItem('lottery-token') || ''}` } }
+export function authHeaders() { return { Authorization: `Bearer ${sessionStorage.getItem('lottery-session') || ''}` } }
 export async function api<T>(url: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(url, { ...init, headers: { ...authHeaders(), 'Content-Type': 'application/json', ...init.headers } })
   const data = await response.json()

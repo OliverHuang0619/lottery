@@ -5,20 +5,22 @@ import os from 'node:os'
 import path from 'node:path'
 import { createServer } from 'node:http'
 import { openStore } from './store.mjs'
-import { automaticTitle, createApi } from './api.mjs'
+import { automaticTitle, createApi, validatePassword } from './api.mjs'
 import { createExecutor } from './executor.mjs'
 import { publicAddress, validateSource, DEFAULT_SOURCE } from './source.mjs'
 
-const token = 'test-only-token-abcdefghijklmnopqrstuvwxyz'
+const password = 'test-password-abc'
 async function fixture(t, options = {}) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'lottery-test-'))
   const store = openStore(directory)
   const executor = createExecutor(store, directory, { command: process.execPath, prefix: [path.join(import.meta.dirname, 'fixtures/fake-cli.mjs')], timeout: 5000, prepare: async (_root, working) => mkdir(working, { recursive: true }), publish: async () => 0, ...options })
-  const api = createApi(store, executor, token)
+  const api = createApi(store, executor, password)
   const server = createServer((req, res) => { void api(req, res, new URL(req.url, 'http://localhost')) })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
-  const request = (url, data, method) => fetch(base + url, { method: method || (data ? 'POST' : 'GET'), headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(data ? { body: JSON.stringify(data) } : {}) })
+  const login = await fetch(base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) })
+  const { sessionToken } = await login.json()
+  const request = (url, data, method) => fetch(base + url, { method: method || (data ? 'POST' : 'GET'), headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' }, ...(data ? { body: JSON.stringify(data) } : {}) })
   t.after(async () => {
     executor.stop(); server.closeAllConnections()
     await new Promise(resolve => server.close(resolve)); store.db.close()
@@ -29,6 +31,7 @@ async function fixture(t, options = {}) {
 test('authentication, conversation persistence, CLI answer, resume and SSE replay', async t => {
   const f = await fixture(t)
   assert.equal((await fetch(f.base + '/api/conversations')).status, 401)
+  assert.equal((await fetch(f.base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: 'wrong-password' }) })).status, 401)
   assert.equal((await fetch(f.base + '/api/health')).status, 200)
   const c = await (await f.request('/api/conversations', { title: '测试对话' })).json()
   const task = await (await f.request(`/api/conversations/${c.id}/messages`, { content: '分析' })).json()
@@ -46,6 +49,11 @@ test('authentication, conversation persistence, CLI answer, resume and SSE repla
   assert.equal(next.messages.at(-1).content, '续接成功')
   const last = f.store.get('SELECT max(id) AS id FROM events WHERE task_id=?', task.id).id
   assert.equal(await (await f.request(`/api/tasks/${task.id}/events?after=${last}`)).text(), '')
+})
+test('password policy rejects short and numeric-only passwords', () => {
+  assert.throws(() => validatePassword('short'))
+  assert.throws(() => validatePassword('12345678'))
+  assert.equal(validatePassword('abc12345'), 'abc12345')
 })
 test('fetch failure never launches CLI or creates a result', async t => {
   const f = await fixture(t, { fetcher: async () => { throw new Error('HTTP 403') } })
@@ -87,7 +95,7 @@ test('source validation rejects private networks, credentials, unlisted hosts an
 test('model configuration is exposed and invalid overrides are rejected', async t => {
   const f = await fixture(t)
   const config = await (await f.request('/api/config')).json()
-  assert.equal(config.version, '1.0.1')
+  assert.equal(config.version, '1.1.0')
   assert.equal(config.defaultModel, 'gpt-5.6-sol')
   assert.equal(config.defaultEffort, 'low')
   assert.ok(config.models.some(row => row.id === 'gpt-5.6-sol'))

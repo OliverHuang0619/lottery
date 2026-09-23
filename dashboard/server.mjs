@@ -12,7 +12,7 @@ const dist = path.join(here, 'dist')
 const port = Number(process.env.PORT || 4173)
 const store = openStore(process.env.STATE_DIR || path.join(projectRoot, 'runtime'))
 const executor = createExecutor(store, projectRoot)
-const api = createApi(store, executor, process.env.APP_TOKEN)
+const api = createApi(store, executor, process.env.APP_PASSWORD)
 const json = async file => JSON.parse(await readFile(path.join(projectRoot, file), 'utf8'))
 
 async function dashboardData() {

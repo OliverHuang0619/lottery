@@ -2,11 +2,11 @@
 
 这是自托管、单管理员工作台：React 聊天 UI → Node API → 串行 Codex CLI 执行器 → 技能与历史数据，SQLite 保存对话、消息、任务、Codex thread ID 和可重放 SSE 事件。现有仪表板保留在侧栏。需要 Docker Compose v2；镜像包含 Node 24、Python 3、Codex CLI 和仓库技能。
 
-1. 复制 `.env.example` 为 `.env`，使用 `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` 生成并填写 `APP_TOKEN`。
+1. 复制 `.env.example` 为 `.env`，设置 `APP_PASSWORD`。密码至少 8 位且不能全部为数字，建议混合字母、数字与符号。
 2. 配置 `CODEX_API_KEY`，或在启动后登录 Codex。
 3. 执行 `docker compose up -d --build`。
 4. 如果使用账户登录，执行 `docker compose exec lottery codex login --device-auth`，按 CLI 提示完成登录。身份保存在独立卷中；不要把本机完整 Codex 配置或凭据打进镜像。
-5. 打开 http://localhost:4173 ，输入 `APP_TOKEN`。新建对话，点击“获取并分析”，或发送自定义问题。
+5. 打开 http://localhost:4173 ，输入 `APP_PASSWORD` 对应的登录密码。新建对话，点击“获取并分析”，或发送自定义问题。
 
 默认模型为 `gpt-5.6-sol`，默认推理强度为 Light（CLI 配置值 `low`）。聊天页右上角可修改模型和推理强度，选择保存在当前浏览器，提交任务时会固定写入任务记录。服务端仅接受界面列出的模型与强度；可用 `.env` 中的 `CODEX_MODEL` 和 `CODEX_REASONING_EFFORT` 修改首次打开时的默认值。
 
@@ -45,7 +45,7 @@
 
 ## 本地开发与检查
 
-需要 Node 24、Python 3、已安装并登录的 Codex CLI。在 PowerShell 设置 `$env:APP_TOKEN='你的至少24字符令牌'`，然后在 `dashboard` 执行 `pnpm build`、`pnpm start`。前端开发另开终端运行 `pnpm dev`，`/api` 代理到 4173。
+需要 Node 24、Python 3、已安装并登录的 Codex CLI。在 PowerShell 设置 `$env:APP_PASSWORD='你的至少8位非纯数字密码'`，然后在 `dashboard` 执行 `pnpm build`、`pnpm start`。前端开发另开终端运行 `pnpm dev`，`/api` 代理到 4173。
 
 后端测试：`node --test dashboard/backend/*.test.mjs`。前端检查：在 `dashboard` 执行 `pnpm exec tsc -b`、`pnpm lint`。
 

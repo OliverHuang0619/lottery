@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from 'node:crypto'
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { DEFAULT_SOURCE, validateSource } from './source.mjs'
@@ -15,6 +15,12 @@ export const EFFORT_OPTIONS = Object.freeze([
 ])
 const defaultModel = () => process.env.CODEX_MODEL || 'gpt-5.6-sol'
 const defaultEffort = () => process.env.CODEX_REASONING_EFFORT || 'low'
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000
+export function validatePassword(password) {
+  if (typeof password !== 'string' || password.length < 8) throw new Error('APP_PASSWORD 至少需要 8 位')
+  if (/^\d+$/.test(password)) throw new Error('APP_PASSWORD 不能全部为数字')
+  return password
+}
 export function appVersion() {
   if (process.env.APP_VERSION) return process.env.APP_VERSION
   for (const file of [path.resolve('VERSION'), path.resolve('..', 'VERSION'), '/app/VERSION']) {
@@ -38,15 +44,38 @@ async function body(req) {
   }
   try { return JSON.parse(value || '{}') } catch { throw Object.assign(new Error('无效 JSON'), { status: 400 }) }
 }
-export function createApi(store, executor, token) {
-  if (!token || token.length < 24) throw new Error('请设置至少 24 字符的 APP_TOKEN')
+export function createApi(store, executor, password) {
+  validatePassword(password)
+  const sessions = new Map()
+  const failures = new Map()
+  const equal = (left, right) => {
+    const a = Buffer.from(left || ''), b = Buffer.from(right || '')
+    return a.length === b.length && timingSafeEqual(a, b)
+  }
   return async (req, res, url) => {
     if (url.pathname === '/api/health') { send(res, 200, { ok: true, version: appVersion() }); return true }
     if (!url.pathname.startsWith('/api/') && url.pathname !== '/dashboard.json') return false
-    const incoming = Buffer.from((req.headers.authorization || '').replace(/^Bearer /, ''))
-    const expected = Buffer.from(token)
-    if (incoming.length !== expected.length || !timingSafeEqual(incoming, expected)) { send(res, 401, { error: '请填写正确的访问令牌' }); return true }
     try {
+      if (req.method === 'POST' && url.pathname === '/api/login') {
+        const key = req.socket.remoteAddress || 'unknown'
+        const attempt = failures.get(key)
+        if (attempt && attempt.until > Date.now() && attempt.count >= 5) { send(res, 429, { error: '密码错误次数过多，请 15 分钟后重试' }); return true }
+        const input = await body(req)
+        if (!equal(input.password, password)) {
+          const count = attempt && attempt.until > Date.now() ? attempt.count + 1 : 1
+          failures.set(key, { count, until: Date.now() + 15 * 60 * 1000 })
+          send(res, 401, { error: '密码错误' }); return true
+        }
+        failures.delete(key)
+        const sessionToken = randomBytes(32).toString('hex')
+        sessions.set(sessionToken, Date.now() + SESSION_TTL_MS)
+        send(res, 200, { sessionToken, expiresIn: SESSION_TTL_MS / 1000 }); return true
+      }
+      const sessionToken = (req.headers.authorization || '').replace(/^Bearer /, '')
+      const expiresAt = sessions.get(sessionToken)
+      if (!expiresAt || expiresAt <= Date.now()) { if (sessionToken) sessions.delete(sessionToken); send(res, 401, { error: '登录已失效，请重新登录' }); return true }
+      sessions.set(sessionToken, Date.now() + SESSION_TTL_MS)
+      if (req.method === 'POST' && url.pathname === '/api/logout') { sessions.delete(sessionToken); send(res, 200, { loggedOut: true }); return true }
       if (url.pathname === '/api/dashboard' || url.pathname === '/dashboard.json') return false
       if (req.method === 'GET' && url.pathname === '/api/config') {
         send(res, 200, { version: appVersion(), defaultSource: DEFAULT_SOURCE, defaultModel: defaultModel(), defaultEffort: defaultEffort(), models: MODEL_OPTIONS, efforts: EFFORT_OPTIONS, skills: [{ id: 'analyze-lottery-history', name: '开奖分析与预测' }] }); return true

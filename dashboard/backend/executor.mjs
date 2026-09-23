@@ -34,7 +34,7 @@ export function createExecutor(store, root, { command = process.env.CODEX_BIN ||
     const common = ['--json', '--skip-git-repo-check', '-m', model, '-c', `model_reasoning_effort="${reasoningEffort}"`, '-c', 'approval_policy="never"', '-c', 'sandbox_mode="workspace-write"']
     const args = conversation.thread_id ? ['exec', 'resume', ...common, conversation.thread_id, '-'] : ['exec', ...common, '-']
     const answer = await new Promise((resolve, reject) => {
-      child = spawn(command, [...prefix, '-C', working, ...args], { cwd: working, shell: false, windowsHide: true, detached: process.platform !== 'win32', env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !['APP_TOKEN'].includes(key))) })
+      child = spawn(command, [...prefix, '-C', working, ...args], { cwd: working, shell: false, windowsHide: true, detached: process.platform !== 'win32', env: Object.fromEntries(Object.entries(process.env).filter(([key]) => !['APP_PASSWORD'].includes(key))) })
       let buffer = '', stderr = '', answer = '', failure = '', completed = false
       const consume = line => {
         if (!line.trim()) return

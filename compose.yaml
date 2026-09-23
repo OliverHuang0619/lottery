@@ -10,7 +10,7 @@ services:
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-4173}:4173"
     environment:
-      APP_TOKEN: ${APP_TOKEN:?Set APP_TOKEN in .env (at least 24 characters)}
+      APP_PASSWORD: ${APP_PASSWORD:?Set APP_PASSWORD in .env (at least 8 characters and not all digits)}
       CODEX_API_KEY: ${CODEX_API_KEY:-}
       CODEX_MODEL: ${CODEX_MODEL:-}
       CODEX_REASONING_EFFORT: ${CODEX_REASONING_EFFORT:-low}

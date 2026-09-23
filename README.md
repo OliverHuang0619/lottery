@@ -6,7 +6,7 @@
 
 历史会话支持首条消息自动命名和确认后删除；运行中任务所在会话受保护。
 
-部署方法和配置见 [DEPLOY.md](DEPLOY.md)。复制 `.env.example` 到 `.env`，设置访问令牌与 Codex 身份后执行 `docker compose up -d --build`，访问 `http://localhost:4173`。
+部署方法和配置见 [DEPLOY.md](DEPLOY.md)。复制 `.env.example` 到 `.env`，设置登录密码与 Codex 身份后执行 `docker compose up -d --build`，访问 `http://localhost:4173`。
 
 此目录是技能与历史记录的云端同步源，建议保存到私有 Git 仓库。
 
@@ -76,3 +76,5 @@ chmod +x scripts/install-skill.sh   # 首次需要
 ## 版本管理
 
 软件版本由仓库根目录的 `VERSION` 统一管理，并遵循语义化版本 `主版本.次版本.修订版本`。发布时同时更新 `VERSION` 与 `dashboard/package.json`；`pnpm build` 会检查两处版本一致，避免发布错误版本。前端品牌区、登录页、`/api/config` 和 `/api/health` 都会显示或返回当前版本。
+
+工作台使用 `APP_PASSWORD` 登录，密码至少 8 位且不能全部为数字。登录接口验证密码后签发限时会话令牌，浏览器不会保存部署密码。
