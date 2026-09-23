@@ -13,6 +13,12 @@ export const EFFORT_OPTIONS = Object.freeze([
 ])
 const defaultModel = () => process.env.CODEX_MODEL || 'gpt-5.6-sol'
 const defaultEffort = () => process.env.CODEX_REASONING_EFFORT || 'low'
+export function automaticTitle(content, sourceUrl = null) {
+  if (sourceUrl && content.startsWith('获取最新一期')) return '最新开奖分析与预测'
+  const compact = content.replace(/\s+/g, ' ').trim().replace(/[。！？!?]+$/u, '')
+  const characters = Array.from(compact)
+  return characters.slice(0, 22).join('') + (characters.length > 22 ? '…' : '')
+}
 
 const send = (res, code, value) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)) }
 async function body(req) {
@@ -37,7 +43,16 @@ export function createApi(store, executor, token) {
         send(res, 200, { defaultSource: DEFAULT_SOURCE, defaultModel: defaultModel(), defaultEffort: defaultEffort(), models: MODEL_OPTIONS, efforts: EFFORT_OPTIONS, skills: [{ id: 'analyze-lottery-history', name: '开奖分析与预测' }] }); return true
       }
       if (url.pathname === '/api/conversations') {
-        if (req.method === 'GET') send(res, 200, store.all('SELECT * FROM conversations ORDER BY created_at DESC'))
+        if (req.method === 'GET') {
+          for (const conversation of store.all("SELECT id FROM conversations WHERE title='新对话'")) {
+            const first = store.get("SELECT content FROM messages WHERE conversation_id=? AND role='user' ORDER BY rowid LIMIT 1", conversation.id)
+            if (first) {
+              const task = store.get('SELECT source_url FROM tasks WHERE conversation_id=? ORDER BY rowid LIMIT 1', conversation.id)
+              store.run('UPDATE conversations SET title=? WHERE id=?', automaticTitle(first.content, task?.source_url), conversation.id)
+            }
+          }
+          send(res, 200, store.all('SELECT * FROM conversations ORDER BY created_at DESC'))
+        }
         else if (req.method === 'POST') { const input = await body(req); send(res, 201, store.conversation(typeof input.title === 'string' ? input.title : undefined)) }
         else send(res, 405, { error: 'Method not allowed' })
         return true
@@ -48,6 +63,18 @@ export function createApi(store, executor, token) {
         if (!store.get('SELECT id FROM conversations WHERE id=?', id)) { send(res, 404, { error: '对话不存在' }); return true }
         if (req.method === 'GET' && !conversationRoute[2]) {
           send(res, 200, { messages: store.all('SELECT * FROM messages WHERE conversation_id=? ORDER BY rowid', id), tasks: store.all('SELECT id,status,error,created_at FROM tasks WHERE conversation_id=? ORDER BY rowid', id) }); return true
+        }
+        if (req.method === 'DELETE' && !conversationRoute[2]) {
+          if (store.get("SELECT id FROM tasks WHERE conversation_id=? AND status IN ('queued','running')", id)) { send(res, 409, { error: '任务处理中，暂时不能删除该对话' }); return true }
+          store.db.exec('BEGIN')
+          try {
+            store.run('DELETE FROM events WHERE task_id IN (SELECT id FROM tasks WHERE conversation_id=?)', id)
+            store.run('DELETE FROM tasks WHERE conversation_id=?', id)
+            store.run('DELETE FROM messages WHERE conversation_id=?', id)
+            store.run('DELETE FROM conversations WHERE id=?', id)
+            store.db.exec('COMMIT')
+          } catch (error) { store.db.exec('ROLLBACK'); throw error }
+          send(res, 200, { deleted: true }); return true
         }
         if (req.method === 'POST' && conversationRoute[2]) {
           const input = await body(req)
@@ -62,14 +89,18 @@ export function createApi(store, executor, token) {
           if (store.get("SELECT id FROM tasks WHERE conversation_id=? AND status IN ('queued','running')", id)) { send(res, 409, { error: '当前对话已有任务正在处理' }); return true }
           if (store.get("SELECT count(*) AS count FROM tasks WHERE status IN ('queued','running')").count >= 20) { send(res, 429, { error: '任务队列已满' }); return true }
           const taskId = randomUUID()
+          const conversation = store.get('SELECT title FROM conversations WHERE id=?', id)
+          const shouldRename = conversation.title === '新对话' && store.get('SELECT count(*) AS count FROM messages WHERE conversation_id=?', id).count === 0
+          const title = shouldRename ? automaticTitle(input.content.trim(), input.sourceUrl || null) : conversation.title
           store.db.exec('BEGIN')
           try {
+            if (shouldRename) store.run('UPDATE conversations SET title=? WHERE id=?', title, id)
             store.message(id, 'user', input.content.trim())
             store.run('INSERT INTO tasks(id,conversation_id,status,prompt,source_url,error,created_at,model,reasoning_effort) VALUES(?,?,?,?,?,?,?,?,?)', taskId, id, 'queued', input.content.trim(), input.sourceUrl || null, null, new Date().toISOString(), model, reasoningEffort)
             store.db.exec('COMMIT')
           } catch (error) { store.db.exec('ROLLBACK'); throw error }
           store.event(taskId, { type: 'status', status: 'queued' })
-          send(res, 202, { id: taskId, status: 'queued' })
+          send(res, 202, { id: taskId, status: 'queued', conversationTitle: title })
           void executor.drain()
           return true
         }

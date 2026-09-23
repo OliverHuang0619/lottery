@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { createServer } from 'node:http'
 import { openStore } from './store.mjs'
-import { createApi } from './api.mjs'
+import { automaticTitle, createApi } from './api.mjs'
 import { createExecutor } from './executor.mjs'
 import { publicAddress, validateSource, DEFAULT_SOURCE } from './source.mjs'
 
@@ -18,7 +18,7 @@ async function fixture(t, options = {}) {
   const server = createServer((req, res) => { void api(req, res, new URL(req.url, 'http://localhost')) })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
-  const request = (url, data) => fetch(base + url, { method: data ? 'POST' : 'GET', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(data ? { body: JSON.stringify(data) } : {}) })
+  const request = (url, data, method) => fetch(base + url, { method: method || (data ? 'POST' : 'GET'), headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, ...(data ? { body: JSON.stringify(data) } : {}) })
   t.after(async () => {
     executor.stop(); server.closeAllConnections()
     await new Promise(resolve => server.close(resolve)); store.db.close()
@@ -60,6 +60,7 @@ test('CLI failure and timeout are terminal; duplicate active requests rejected',
   const c = await (await f.request('/api/conversations', {})).json()
   const task = await (await f.request(`/api/conversations/${c.id}/messages`, { content: 'TEST_TIMEOUT' })).json()
   assert.equal((await f.request(`/api/conversations/${c.id}/messages`, { content: '重复' })).status, 409)
+  assert.equal((await f.request(`/api/conversations/${c.id}`, undefined, 'DELETE')).status, 409)
   assert.match(await (await f.request(`/api/tasks/${task.id}/events`)).text(), /任务执行超时/)
   const failed = await (await f.request(`/api/conversations/${c.id}/messages`, { content: 'TEST_FAILURE' })).json()
   assert.match(await (await f.request(`/api/tasks/${failed.id}/events`)).text(), /模拟失败/)
@@ -91,4 +92,22 @@ test('model configuration is exposed and invalid overrides are rejected', async 
   assert.ok(config.models.some(row => row.id === 'gpt-5.6-sol'))
   const c = await (await f.request('/api/conversations', {})).json()
   assert.equal((await f.request(`/api/conversations/${c.id}/messages`, { content: '分析', model: 'gpt-5.3-codex' })).status, 400)
+})
+test('first message names a conversation and completed history can be deleted', async t => {
+  const f = await fixture(t)
+  assert.equal(automaticTitle('  分析第 103 期\n特码走势！  '), '分析第 103 期 特码走势')
+  assert.equal(automaticTitle('获取最新一期完整开奖记录', DEFAULT_SOURCE), '最新开奖分析与预测')
+  const c = await (await f.request('/api/conversations', {})).json()
+  const task = await (await f.request(`/api/conversations/${c.id}/messages`, { content: '分析第 103 期特码走势和近期变化' })).json()
+  assert.equal(task.conversationTitle, '分析第 103 期特码走势和近期变化')
+  await (await f.request(`/api/tasks/${task.id}/events`)).text()
+  assert.equal(f.store.get('SELECT title FROM conversations WHERE id=?', c.id).title, task.conversationTitle)
+  f.store.run("UPDATE conversations SET title='新对话' WHERE id=?", c.id)
+  const listed = await (await f.request('/api/conversations')).json()
+  assert.equal(listed.find(row => row.id === c.id).title, task.conversationTitle)
+  assert.equal((await f.request(`/api/conversations/${c.id}`, undefined, 'DELETE')).status, 200)
+  assert.equal(f.store.get('SELECT id FROM conversations WHERE id=?', c.id), undefined)
+  assert.equal(f.store.get('SELECT id FROM tasks WHERE conversation_id=?', c.id), undefined)
+  assert.equal(f.store.get('SELECT id FROM messages WHERE conversation_id=?', c.id), undefined)
+  assert.equal(f.store.get('SELECT id FROM events WHERE task_id=?', task.id), undefined)
 })

@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS frontend
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS frontend
 WORKDIR /build/dashboard
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 COPY dashboard/package.json dashboard/pnpm-lock.yaml ./
@@ -7,7 +7,7 @@ COPY dashboard/ ./
 # The live container serves data only through authenticated backend routes.
 RUN rm -f public/dashboard.json && pnpm exec tsc -b && pnpm exec vite build
 
-FROM node:24-bookworm-slim
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
 ARG CODEX_VERSION=0.155.1
 RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates git tini \
     && rm -rf /var/lib/apt/lists/* \

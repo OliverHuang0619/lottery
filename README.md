@@ -4,6 +4,8 @@
 
 已增加聊天前端、鉴权 API、SQLite 会话/任务存储、Codex CLI 执行器与 SSE 进度推送。侧栏可切换原有数据仪表板，“获取并分析”默认读取指定开奖网站，再调用仓库技能完成复盘与预测。
 
+历史会话支持首条消息自动命名和确认后删除；运行中任务所在会话受保护。
+
 部署方法和配置见 [DEPLOY.md](DEPLOY.md)。复制 `.env.example` 到 `.env`，设置访问令牌与 Codex 身份后执行 `docker compose up -d --build`，访问 `http://localhost:4173`。
 
 此目录是技能与历史记录的云端同步源，建议保存到私有 Git 仓库。
